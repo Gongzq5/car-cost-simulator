@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义车型购车成本分析平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --card-bg: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7eb 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .control-panel {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 20px var(--shadow);
+            position: relative;
+        }
+        
+        .panel-title {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary);
+            color: var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn.btn-import {
+            background: var(--success);
+        }
+        
+        .btn.btn-export {
+            background: var(--warning);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .slider-container input[type="range"] {
+            flex: 1;
+        }
+        
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            background: var(--light);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .car-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        
+        .car-card {
+            background: var(--light);
+            padding: 15px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            border: 2px solid transparent;
+            position: relative;
+        }
+        
+        .car-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .car-card.selected {
+            border-color: var(--secondary);
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .car-card .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        
+        .car-card .remove-btn:hover {
+            opacity: 1;
+        }
+        
+        .visualization {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 20px var(--shadow);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-container {
+            flex: 1;
+            min-height: 300px;
+            position: relative;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab {
+            padding: 12px 25px;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--secondary);
+            color: var(--secondary);
+        }
+        
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+        }
+        
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .comparison-table th {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: var(--light);
+        }
+        
+        .comparison-table tr:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .best-value {
+            background: rgba(46, 204, 113, 0.2) !important;
+            font-weight: 700;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        /* 自定义车型模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 700px;
+            border-radius: 12px;
+            padding: 30px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        
+        .modal-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--accent);
+        }
+        
+        .form-columns {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .form-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--light);
+            border-radius: 8px;
+        }
+        
+        .form-section-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-section-title::before {
+            content: "•";
+            margin-right: 10px;
+            color: var(--secondary);
+        }
+        
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media (max-width: 1100px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .form-columns {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>自定义车型购车成本分析平台</h1>
+            <p class="subtitle">全面支持自定义车型，动态调整参数，实时计算购车成本</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="control-panel">
+                <div class="panel-title">
+                    <span>参数设置</span>
+                    <div>
+                        <button class="btn btn-import" id="importBtn">导入</button>
+                        <button class="btn btn-export" id="exportBtn">导出</button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="highwayDistance">高速单程距离 (km)</label>
+                    <div class="slider-container">
+                        <input type="range" id="highwayDistance" min="10" max="200" value="50">
+                        <span class="slider-value" id="highwayDistanceValue">50</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="highwayFrequency">高速次数/月</label>
+                    <div class="slider-container">
+                        <input type="range" id="highwayFrequency" min="1" max="20" value="8">
+                        <span class="slider-value" id="highwayFrequencyValue">8</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cityDistance">城区单程距离 (km)</label>
+                    <div class="slider-container">
+                        <input type="range" id="cityDistance" min="5" max="50" value="15">
+                        <span class="slider-value" id="cityDistanceValue">15</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cityFrequency">城区次数/月</label>
+                    <div class="slider-container">
+                        <input type="range" id="cityFrequency" min="5" max="50" value="22">
+                        <span class="slider-value" id="cityFrequencyValue">22</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="electricityPrice">充电价格 (元/kWh)</label>
+                    <div class="slider-container">
+                        <input type="range" id="electricityPrice" min="0.5" max="2.5" step="0.1" value="1.2">
+                        <span class="slider-value" id="electricityPriceValue">1.2</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fuelPrice">用油成本 (元/L)</label>
+                    <div class="slider-container">
+                        <input type="range" id="fuelPrice" min="6" max="10" step="0.1" value="8.5">
+                        <span class="slider-value" id="fuelPriceValue">8.5</span>
+                    </div>
+                </div>
+                
+                <div class="panel-title">
+                    <span>车型选择</span>
+                    <button class="btn" id="addCarBtn">+ 添加车型</button>
+                </div>
+                <div class="car-selection" id="carSelection">
+                    <!-- 车型卡片将通过JS动态生成 -->
+                </div>
+            </div>
+            
+            <div class="visualization">
+                <div class="tabs">
+                    <div class="tab active" data-tab="cost">成本对比</div>
+                    <div class="tab" data-tab="energy">能耗分析</div>
+                    <div class="tab" data-tab="longterm">长期成本</div>
+                    <div class="tab" data-tab="residual">残值分析</div>
+                </div>
+                
+                <div class="chart-container">
+                    <canvas id="costChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="results-container">
+            <div class="result-card">
+                <div class="result-header">
+                    <h3 class="result-title">月使用成本</h3>
+                </div>
+                <div class="result-value" id="monthlyCostResult">-</div>
+                <div id="monthlyCostChart" style="height: 200px; margin-top: 20px;"></div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-header">
+                    <h3 class="result-title">每公里成本</h3>
+                </div>
+                <div class="result-value" id="perKmCostResult">-</div>
+                <div id="perKmCostChart" style="height: 200px; margin-top: 20px;"></div>
+            </div>
+            
+            <div class="result-card">
+                <div class="result-header">
+                    <h3 class="result-title">5年总拥有成本</h3>
+                </div>
+                <div class="result-value" id="totalCostResult">-</div>
+                <div id="totalCostChart" style="height: 200px; margin-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <div class="result-card" style="margin-top: 30px;">
+            <h2 class="panel-title">详细车型对比</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>指标</th>
+                        <!-- 表头将通过JS动态生成 -->
+                    </tr>
+                </thead>
+                <tbody id="comparisonBody">
+                    <!-- 数据将通过JS填充 -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>© 2023 购车成本分析平台 | 数据仅供参考，实际成本可能因使用情况而异</p>
+        </div>
+    </div>
+
+    <!-- 自定义车型模态框 -->
+    <div class="modal" id="customCarModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">自定义车型配置</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            
+            <div class="form-columns">
+                <div>
+                    <div class="form-section">
+                        <h3 class="form-section-title">基本信息</h3>
+                        
+                        <div class="form-group">
+                            <label for="carName">车型名称</label>
+                            <input type="text" id="carName" placeholder="例如：特斯拉 Model Y">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="carType">车辆类型</label>
+                            <select id="carType">
+                                <option value="纯电动">纯电动</option>
+                                <option value="混动">混动</option>
+                                <option value="燃油">燃油</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="carPrice">官方指导价 (万元)</label>
+                            <input type="number" id="carPrice" placeholder="例如：25.99" step="0.01" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="residualRate">3年保值率 (%)</label>
+                            <input type="number" id="residualRate" placeholder="例如：65" step="1" min="0" max="100">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="carColor">代表颜色</label>
+                            <input type="color" id="carColor" value="#3498db">
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3 class="form-section-title">成本参数</h3>
+                        
+                        <div class="form-group">
+                            <label for="insuranceCost">保险价格 (元/年)</label>
+                            <input type="number" id="insuranceCost" placeholder="例如：6500" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="maintenanceCost">保养价格 (5年总费用，元)</label>
+                            <input type="number" id="maintenanceCost" placeholder="例如：12000" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="form-section">
+                        <h3 class="form-section-title">纯电动参数</h3>
+                        
+                        <div class="form-group">
+                            <label for="highwayElectric">高速电耗 (kWh/100km)</label>
+                            <input type="number" id="highwayElectric" placeholder="例如：16.5" step="0.1" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cityElectric">城区电耗 (kWh/100km)</label>
+                            <input type="number" id="cityElectric" placeholder="例如：14.2" step="0.1" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="electricRange">纯电续航 (km)</label>
+                            <input type="number" id="electricRange" placeholder="例如：550" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h3 class="form-section-title">混动/燃油参数</h3>
+                        
+                        <div class="form-group">
+                            <label for="highwayFuel">高速油耗 (L/100km)</label>
+                            <input type="number" id="highwayFuel" placeholder="例如：5.2" step="0.1" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cityFuel">城区油耗 (L/100km)</label>
+                            <input type="number" id="cityFuel" placeholder="例如：4.8" step="0.1" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="fuelConsumption">馈电油耗 (L/100km)</label>
+                            <input type="number" id="fuelConsumption" placeholder="例如：6.8" step="0.1" min="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn" id="resetFormBtn">重置</button>
+                <button class="btn" id="saveTemplateBtn">保存为模板</button>
+                <button class="btn" id="saveCarBtn">保存车型</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 车型数据
+        let carData = {
+            'song': {
+                id: 'song',
+                name: '宋L DMi',
+                type: '混动',
+                price: 18.98,
+                residualRate: 62,
+                highwayElectric: 0,
+                cityElectric: 0,
+                highwayFuel: 5.2,
+                cityFuel: 4.8,
+                electricRange: 120,
+                fuelConsumption: 6.8,
+                insurance: 6000,
+                maintenance: 12000,
+                color: '#3498db'
+            },
+            'haibaoEV': {
+                id: 'haibaoEV',
+                name: '海豹EV',
+                type: '纯电动',
+                price: 21.28,
+                residualRate: 58,
+                highwayElectric: 16.5,
+                cityElectric: 14.2,
+                highwayFuel: 0,
+                cityFuel: 0,
+                electricRange: 550,
+                fuelConsumption: 0,
+                insurance: 6500,
+                maintenance: 9000,
+                color: '#e74c3c'
+            },
+            'haibao07': {
+                id: 'haibao07',
+                name: '海豹07 DMi',
+                type: '混动',
+                price: 19.58,
+                residualRate: 65,
+                highwayElectric: 0,
+                cityElectric: 0,
+                highwayFuel: 3.4,
+                cityFuel: 3.8,
+                electricRange: 150,
+                fuelConsumption: 5.2,
+                insurance: 6200,
+                maintenance: 10000,
+                color: '#2ecc71'
+            },
+            'shenlan': {
+                id: 'shenlan',
+                name: '深蓝S07',
+                type: '混动',
+                price: 17.39,
+                residualRate: 60,
+                highwayElectric: 0,
+                cityElectric: 0,
+                highwayFuel: 3.94,
+                cityFuel: 4.1,
+                electricRange: 160,
+                fuelConsumption: 5.5,
+                insurance: 5800,
+                maintenance: 9500,
+                color: '#f39c12'
+            },
+            'zeeker': {
+                id: 'zeeker',
+                name: '极氪007',
+                type: '纯电动',
+                price: 22.99,
+                residualRate: 70,
+                highwayElectric: 15.0,
+                cityElectric: 13.8,
+                highwayFuel: 0,
+                cityFuel: 0,
+                electricRange: 620,
+                fuelConsumption: 0,
+                insurance: 7200,
+                maintenance: 11500,
+                color: '#34495e'
+            }
+        };
+
+        // 图表实例
+        let costChart = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化车型选择
+            renderCarSelection();
+            
+            // 绑定滑块事件
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                slider.addEventListener('input', function() {
+                    document.getElementById(this.id + 'Value').textContent = this.value;
+                    calculateCosts();
+                });
+            });
+            
+            // 绑定添加车型按钮
+            document.getElementById('addCarBtn').addEventListener('click', function() {
+                document.getElementById('customCarModal').style.display = 'flex';
+            });
+            
+            // 关闭模态框
+            document.querySelector('.close-modal').addEventListener('click', function() {
+                document.getElementById('customCarModal').style.display = 'none';
+            });
+            
+            // 重置表单
+            document.getElementById('resetFormBtn').addEventListener('click', resetCarForm);
+            
+            // 保存车型
+            document.getElementById('saveCarBtn').addEventListener('click', saveCustomCar);
+            
+            // 绑定标签页事件
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    updateChart(this.dataset.tab);
+                });
+            });
+            
+            // 初始化计算
+            calculateCosts();
+        });
+        
+        // 渲染车型选择区域
+        function renderCarSelection() {
+            const container = document.getElementById('carSelection');
+            container.innerHTML = '';
+            
+            for (const carId in carData) {
+                const car = carData[carId];
+                const card = document.createElement('div');
+                card.className = 'car-card selected';
+                card.dataset.car = carId;
+                card.innerHTML = `
+                    <span class="remove-btn" data-car="${carId}">×</span>
+                    <div>${car.name}</div>
+                    <small>${car.type}</small>
+                `;
+                container.appendChild(card);
+            }
+            
+            // 绑定车型选择事件
+            document.querySelectorAll('.car-card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('remove-btn')) {
+                        // 删除车型
+                        const carId = e.target.dataset.car;
+                        delete carData[carId];
+                        renderCarSelection();
+                        calculateCosts();
+                    } else {
+                        // 选择/取消选择车型
+                        this.classList.toggle('selected');
+                        calculateCosts();
+                    }
+                });
+            });
+        }
+        
+        // 重置车型表单
+        function resetCarForm() {
+            document.getElementById('carName').value = '';
+            document.getElementById('carType').value = '纯电动';
+            document.getElementById('carPrice').value = '';
+            document.getElementById('residualRate').value = '';
+            document.getElementById('carColor').value = '#3498db';
+            document.getElementById('insuranceCost').value = '';
+            document.getElementById('maintenanceCost').value = '';
+            document.getElementById('highwayElectric').value = '';
+            document.getElementById('cityElectric').value = '';
+            document.getElementById('electricRange').value = '';
+            document.getElementById('highwayFuel').value = '';
+            document.getElementById('cityFuel').value = '';
+            document.getElementById('fuelConsumption').value = '';
+        }
+        
+        // 保存自定义车型
+        function saveCustomCar() {
+            const carName = document.getElementById('carName').value.trim();
+            if (!carName) {
+                alert('请输入车型名称');
+                return;
+            }
+            
+            // 生成唯一ID
+            const carId = 'custom_' + Date.now();
+            
+            // 创建车型对象
+            carData[carId] = {
+                id: carId,
+                name: carName,
+                type: document.getElementById('carType').value,
+                price: parseFloat(document.getElementById('carPrice').value) || 0,
+                residualRate: parseFloat(document.getElementById('residualRate').value) || 0,
+                highwayElectric: parseFloat(document.getElementById('highwayElectric').value) || 0,
+                cityElectric: parseFloat(document.getElementById('cityElectric').value) || 0,
+                highwayFuel: parseFloat(document.getElementById('highwayFuel').value) || 0,
+                cityFuel: parseFloat(document.getElementById('cityFuel').value) || 0,
+                electricRange: parseFloat(document.getElementById('electricRange').value) || 0,
+                fuelConsumption: parseFloat(document.getElementById('fuelConsumption').value) || 0,
+                insurance: parseFloat(document.getElementById('insuranceCost').value) || 0,
+                maintenance: parseFloat(document.getElementById('maintenanceCost').value) || 0,
+                color: document.getElementById('carColor').value
+            };
+            
+            // 关闭模态框并更新界面
+            document.getElementById('customCarModal').style.display = 'none';
+            renderCarSelection();
+            calculateCosts();
+            resetCarForm();
+            
+            alert(`车型 "${carName}" 添加成功！`);
+        }
+        
+        // 计算成本
+        function calculateCosts() {
+            // 获取输入值
+            const highwayDistance = parseFloat(document.getElementById('highwayDistance').value);
+            const highwayFrequency = parseFloat(document.getElementById('highwayFrequency').value);
+            const cityDistance = parseFloat(document.getElementById('cityDistance').value);
+            const cityFrequency = parseFloat(document.getElementById('cityFrequency').value);
+            const electricityPrice = parseFloat(document.getElementById('electricityPrice').value);
+            const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
+            
+            // 计算月行驶距离
+            const highwayMonthly = highwayDistance * highwayFrequency;
+            const cityMonthly = cityDistance * cityFrequency;
+            const totalMonthly = highwayMonthly + cityMonthly;
+            
+            // 获取选中的车型
+            const selectedCars = Array.from(document.querySelectorAll('.car-card.selected'))
+                .map(card => carData[card.dataset.car]);
+            
+            // 为每个车型计算成本
+            const results = selectedCars.map(car => {
+                // 计算高速能耗成本
+                let highwayCost = 0;
+                if (car.type === '纯电动') {
+                    highwayCost = (highwayMonthly * car.highwayElectric / 100) * electricityPrice;
+                } else if (car.type === '燃油') {
+                    highwayCost = (highwayMonthly * car.highwayFuel / 100) * fuelPrice;
+                } else { // 混动
+                    if (highwayDistance <= car.electricRange) {
+                        highwayCost = (highwayMonthly * car.highwayElectric / 100) * electricityPrice;
+                    } else {
+                        highwayCost = (highwayMonthly * car.fuelConsumption / 100) * fuelPrice;
+                    }
+                }
+                
+                // 计算城区能耗成本
+                let cityCost = 0;
+                if (car.type === '纯电动') {
+                    cityCost = (cityMonthly * car.cityElectric / 100) * electricityPrice;
+                } else if (car.type === '燃油') {
+                    cityCost = (cityMonthly * car.cityFuel / 100) * fuelPrice;
+                } else { // 混动
+                    if (cityDistance <= car.electricRange) {
+                        cityCost = (cityMonthly * car.cityElectric / 100) * electricityPrice;
+                    } else {
+                        cityCost = (cityMonthly * car.fuelConsumption / 100) * fuelPrice;
+                    }
+                }
+                
+                // 计算总能耗成本
+                const energyCost = highwayCost + cityCost;
+                
+                // 计算固定成本
+                const insuranceMonthly = car.insurance / 12;
+                const maintenanceMonthly = car.maintenance / 60; // 5年=60个月
+                
+                // 计算总月成本
+                const monthlyCost = energyCost + insuranceMonthly + maintenanceMonthly;
+                
+                // 计算每公里成本
+                const perKmCost = monthlyCost / totalMonthly;
+                
+                // 计算5年使用成本
+                const fiveYearUsageCost = monthlyCost * 60;
+                
+                // 计算3年残值
+                const residualValue = car.price * (car.residualRate / 100);
+                
+                // 计算5年总拥有成本
+                const totalOwnershipCost = (car.price - residualValue) + (fiveYearUsageCost / 10000);
+                
+                return {
+                    ...car,
+                    monthlyCost: monthlyCost,
+                    perKmCost: perKmCost,
+                    totalOwnershipCost: totalOwnershipCost,
+                    residualValue: residualValue,
+                    fiveYearUsageCost: fiveYearUsageCost
+                };
+            });
+            
+            // 更新结果展示
+            updateResults(results);
+            
+            // 更新对比表格
+            updateComparisonTable(results);
+            
+            // 更新图表
+            updateChart('cost');
+        }
+        
+        // 更新结果展示
+        function updateResults(results) {
+            if (results.length === 0) return;
+            
+            // 找到最低成本的车型
+            const minMonthlyCostCar = results.reduce((min, car) => 
+                car.monthlyCost < min.monthlyCost ? car : min, results[0]);
+            
+            const minPerKmCostCar = results.reduce((min, car) => 
+                car.perKmCost < min.perKmCost ? car : min, results[0]);
+            
+            const minTotalCostCar = results.reduce((min, car) => 
+                car.totalOwnershipCost < min.totalOwnershipCost ? car : min, results[0]);
+            
+            // 更新结果卡片
+            document.getElementById('monthlyCostResult').innerHTML = 
+                `${minMonthlyCostCar.name}: <span style="color:${minMonthlyCostCar.color}">¥${minMonthlyCostCar.monthlyCost.toFixed(2)}</span>`;
+            
+            document.getElementById('perKmCostResult').innerHTML = 
+                `${minPerKmCostCar.name}: <span style="color:${minPerKmCostCar.color}">¥${minPerKmCostCar.perKmCost.toFixed(2)}</span>`;
+            
+            document.getElementById('totalCostResult').innerHTML = 
+                `${minTotalCostCar.name}: <span style="color:${minTotalCostCar.color}">¥${minTotalCostCar.totalOwnershipCost.toFixed(2)}万</span>`;
+            
+            // 更新小图表
+            updateMiniCharts(results);
+        }
+        
+        // 更新小图表
+        function updateMiniCharts(results) {
+            createBarChart('monthlyCostChart', '月使用成本', results, 'monthlyCost');
+            createBarChart('perKmCostChart', '每公里成本', results, 'perKmCost');
+            createBarChart('totalCostChart', '5年总拥有成本 (万元)', results, 'totalOwnershipCost');
+        }
+        
+        function createBarChart(containerId, title, data, key) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div style="font-size:14px; margin-bottom:5px; font-weight:600;">${title}</div>
+                ${data.map(car => `
+                    <div style="display:flex; align-items:center; margin-bottom:8px;">
+                        <div style="width:100px; font-size:12px;">${car.name}</div>
+                        <div style="flex:1; position:relative; height:20px; background:#eee; border-radius:4px; overflow:hidden;">
+                            <div style="position:absolute; top:0; left:0; height:100%; width:${(car[key]/Math.max(...data.map(d => d[key])))*100}%; background:${car.color};"></div>
+                            <div style="position:absolute; top:0; left:0; width:100%; text-align:center; font-size:12px; line-height:20px;">
+                                ${key === 'totalOwnershipCost' ? '¥' + car[key].toFixed(2) + '万' : '¥' + car[key].toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        // 更新对比表格
+        function updateComparisonTable(results) {
+            if (results.length === 0) return;
+            
+            const tableHead = document.querySelector('.comparison-table thead tr');
+            const tableBody = document.getElementById('comparisonBody');
+            
+            // 更新表头
+            tableHead.innerHTML = '<th>指标</th>' + 
+                results.map(car => `<th>${car.name}</th>`).join('');
+            
+            // 定义要显示的指标
+            const rows = [
+                { label: '车辆类型', key: 'type', unit: '' },
+                { label: '官方指导价', key: 'price', unit: '万元', format: v => `¥${v.toFixed(2)}` },
+                { label: '3年保值率', key: 'residualRate', unit: '%', format: v => `${v}%` },
+                { label: '高速能耗', key: 'highwayElectric', unit: 'kWh/100km', format: v => v || '-' },
+                { label: '城区能耗', key: 'cityElectric', unit: 'kWh/100km', format: v => v || '-' },
+                { label: '高速油耗', key: 'highwayFuel', unit: 'L/100km', format: v => v || '-' },
+                { label: '城区油耗', key: 'cityFuel', unit: 'L/100km', format: v => v || '-' },
+                { label: '月使用成本', key: 'monthlyCost', unit: '元', format: v => `¥${v.toFixed(2)}` },
+                { label: '每公里成本', key: 'perKmCost', unit: '元/km', format: v => `¥${v.toFixed(2)}` },
+                { label: '5年总拥有成本', key: 'totalOwnershipCost', unit: '万元', format: v => `¥${v.toFixed(2)}` },
+                { label: '3年残值', key: 'residualValue', unit: '万元', format: v => `¥${v.toFixed(2)}` }
+            ];
+            
+            tableBody.innerHTML = rows.map(row => {
+                const cells = results.map(car => {
+                    const value = car[row.key];
+                    const formatted = row.format ? row.format(value) : value;
+                    return `<td>${formatted}</td>`;
+                }).join('');
+                
+                return `
+                    <tr>
+                        <td>${row.label} (${row.unit})</td>
+                        ${cells}
+                    </tr>
+                `;
+            }).join('');
+            
+            // 标记最佳值
+            const minMonthlyCost = Math.min(...results.map(c => c.monthlyCost));
+            const minPerKmCost = Math.min(...results.map(c => c.perKmCost));
+            const minTotalCost = Math.min(...results.map(c => c.totalOwnershipCost));
+            
+            const rowsToHighlight = [7, 8, 9]; // 月成本、每公里成本、总成本所在行索引
+            
+            rowsToHighlight.forEach((rowIndex, i) => {
+                const row = tableBody.children[rowIndex];
+                if (!row) return;
+                
+                const cells = row.getElementsByTagName('td');
+                
+                // 跳过第一列（指标列）
+                for (let j = 1; j < cells.length; j++) {
+                    let isBest = false;
+                    
+                    if (i === 0) { // 月成本
+                        isBest = results[j-1].monthlyCost === minMonthlyCost;
+                    } else if (i === 1) { // 每公里成本
+                        isBest = results[j-1].perKmCost === minPerKmCost;
+                    } else { // 总成本
+                        isBest = results[j-1].totalOwnershipCost === minTotalCost;
+                    }
+                    
+                    if (isBest) {
+                        cells[j].classList.add('best-value');
+                    } else {
+                        cells[j].classList.remove('best-value');
+                    }
+                }
+            });
+        }
+        
+        // 更新主图表
+        function updateChart(tab) {
+            const ctx = document.getElementById('costChart').getContext('2d');
+            
+            // 如果已有图表实例，销毁它
+            if (costChart) {
+                costChart.destroy();
+            }
+            
+            // 获取选中的车型
+            const selectedCars = Array.from(document.querySelectorAll('.car-card.selected'))
+                .map(card => carData[card.dataset.car]);
+            
+            if (selectedCars.length === 0) return;
+            
+            let datasets = [];
+            let labels = [];
+            
+            switch(tab) {
+                case 'cost':
+                    labels = ['月使用成本', '每公里成本', '5年总拥有成本'];
+                    datasets = selectedCars.map(car => {
+                        return {
+                            label: car.name,
+                            data: [car.monthlyCost || 0, (car.perKmCost || 0) * 100, car.totalOwnershipCost || 0],
+                            backgroundColor: car.color,
+                            borderColor: car.color,
+                            borderWidth: 1
+                        };
+                    });
+                    break;
+                    
+                case 'energy':
+                    labels = ['高速能耗', '城区能耗'];
+                    datasets = selectedCars.map(car => {
+                        const highway = car.type === '纯电动' ? car.highwayElectric : car.highwayFuel;
+                        const city = car.type === '纯电动' ? car.cityElectric : car.cityFuel;
+                        
+                        return {
+                            label: car.name,
+                            data: [highway || 0, city || 0],
+                            backgroundColor: [car.color, car.color + '80'],
+                            borderColor: [car.color, car.color],
+                            borderWidth: 1
+                        };
+                    });
+                    break;
+                    
+                case 'longterm':
+                    labels = ['1年', '3年', '5年'];
+                    datasets = selectedCars.map(car => {
+                        const year1 = (car.monthlyCost || 0) * 12;
+                        const year3 = year1 * 3;
+                        const year5 = car.totalOwnershipCost * 10000 || year1 * 5;
+                        
+                        return {
+                            label: car.name,
+                            data: [year1/10000, year3/10000, year5/10000],
+                            backgroundColor: car.color + '40',
+                            borderColor: car.color,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3
+                        };
+                    });
+                    break;
+                    
+                case 'residual':
+                    labels = ['新车价格', '1年残值', '3年残值', '5年残值'];
+                    datasets = selectedCars.map(car => {
+                        return {
+                            label: car.name,
+                            data: [
+                                car.price || 0,
+                                car.price * 0.8 || 0,
+                                car.residualValue || car.price * (car.residualRate/100) || 0,
+                                car.price * 0.4 || 0
+                            ],
+                            backgroundColor: car.color + '40',
+                            borderColor: car.color,
+                            borderWidth: 2,
+                            tension: 0.3
+                        };
+                    });
+                    break;
+            }
+            
+            costChart = new Chart(ctx, {
+                type: tab === 'longterm' || tab === 'residual' ? 'line' : 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: tab === 'cost' ? '成本对比分析' : 
+                                  tab === 'energy' ? '能耗对比分析' :
+                                  tab === 'longterm' ? '长期使用成本趋势' : '车辆残值趋势',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += tab === 'cost' && context.dataIndex === 1 ? 
+                                            '¥' + (context.parsed.y / 100).toFixed(2) + '/km' :
+                                            '¥' + context.parsed.y.toFixed(2) + (tab === 'residual' || tab === 'longterm' ? '万' : '');
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: tab === 'residual' || tab === 'longterm' ? '价格 (万元)' : '成本 (元)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
